@@ -7,10 +7,9 @@
     .SYNOPSIS
     Connects to Sophos Central Partner 
     .DESCRIPTION
-    This PowerShell script prompts the user to enter their Sophos client ID and secret, and a file path to save the results. 
+    This PowerShell script prompts the user to enter their Sophos client ID, secret and TenantID which can be found in the registry of the effected machine. 
     It then uses the client ID and secret to authenticate with the Sophos API and retrieve an access token. 
-    The script then uses the access token to retrieve information about all tenants associated with the authenticated account and saves this information in a CSV file. 
-    The script retrieves the tenant information in batches, as there may be many tenants, and appends each batch to the same CSV file.
+    The script then uses the access token to retrieve information about all tenants associated with the authenticated account searches for the tenant ID and returns the company its associated with. 
     .NOTES
 #>
 
