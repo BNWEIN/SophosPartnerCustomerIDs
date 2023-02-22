@@ -1,6 +1,7 @@
 <#
     Script Changelog
     1.0     [Feb 2023]    Ben Weinberg      - Script developed
+    1.1     [Feb 2023]    Ben Weinberg      - Modified script to include search for tenant ID
 #>
 <# 
     .SYNOPSIS
@@ -24,10 +25,11 @@ if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.In
     Write-Host "A client secret must be specified."
     return
 }
-$defaultPath = "c:\temp\Sophos.csv"
-$csvFilePath = Read-Host -Prompt "Enter the location to save the results, please include the file name ending in .csv (default: $defaultPath)"
-if ($csvFilePath -eq "") {
-    $csvFilePath = $defaultPath
+
+$tenantId = Read-Host -Prompt "Enter a tenant ID taken from the registry"
+if ($tenantId -eq "" ){
+    write-host "A Tenant ID must be specified"
+    return
 }
 
 $authParams = @{
@@ -69,24 +71,23 @@ $firstPageUrl = "https://api.central.sophos.com/partner/v1/tenants?pageTotal=tru
 
 $firstPageResponse = Invoke-RestMethod -Uri $firstPageUrl -Headers $headers -Method Get
 $totalPages = $firstPageResponse.pages.total
-
+$matchedTenant = $null
 for ($page = 1; $page -le $totalPages; $page++) {
     $tenantsUrl = "https://api.central.sophos.com/partner/v1/tenants?pageTotal=true&page=$page"
     $tenantsResponse = Invoke-RestMethod -Uri $tenantsUrl -Headers $headers -Method Get
-
-    # display the tenant information
-    #foreach ($tenant in $tenantsResponse.items) {
-    #    Write-Output "Tenant ID: $($tenant.id)"
-    #    Write-Output "Tenant Name: $($tenant.name)"
-    #    Write-Output "Data Geography: $($tenant.dataGeography)"
-    #    Write-Output "Data Region: $($tenant.dataRegion)"
-    #    Write-Output "Billing Type: $($tenant.billingType)"
-    #    Write-Output "API Host: $($tenant.apiHost)"
-    #    Write-Output ""
-    #}
-
-    # append the tenant information to the CSV file
-    $tenantsResponse.items | Select-Object id, name, dataGeography, dataRegion, billingType, apiHost | Export-Csv -Path $csvFilePath -NoTypeInformation -Append
+    foreach ($tenant in $tenantsResponse.items) {
+        if ($tenant.id -eq $tenantId) {
+            $matchedTenant = $tenant
+            break
+        }
+    }
+    if ($matchedTenant) {
+        break
+    }
 }
 
-Write-Host "Tenant information has been exported to $csvFilePath."
+if ($matchedTenant) {
+    Write-Host "Tenant name for ID $tenantId is $($matchedTenant.name)" -ForegroundColor Green
+} else {
+    Write-Host "No tenant found with ID $tenantId" -ForegroundColor Red
+}
