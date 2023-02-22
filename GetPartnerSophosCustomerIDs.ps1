@@ -15,20 +15,23 @@
 #>
 
 
-$clientId = Read-Host -Prompt 'Enter your Client ID'
+$clientId = Read-Host -Prompt 'Enter your Client ID, ask Ben if unsure'
 if ($clientId -eq "" ){
     write-host "A client ID must be specified"
     return
 }
-$clientSecret = Read-Host -Prompt 'Enter your Client Secret' -AsSecureString
+$clientSecret = Read-Host -Prompt 'Enter your Client Secret, ask Ben if unsure' -AsSecureString
 if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($clientSecret)) -eq "") {
     Write-Host "A client secret must be specified."
     return
 }
 
-$tenantId = Read-Host -Prompt "Enter a tenant ID taken from the registry"
-if ($tenantId -eq "" ){
+$tenantId = Read-Host -Prompt "Enter a tenant ID"
+if ([string]::IsNullOrEmpty($tenantId)) {
     write-host "A Tenant ID must be specified"
+    return
+} elseif (-not [Guid]::TryParse($tenantId, [ref][Guid]::Empty)) {
+    write-host "The Tenant ID must be in the GUID format"
     return
 }
 
@@ -44,7 +47,12 @@ $authParams = @{
     ContentType = 'application/x-www-form-urlencoded'
 }
 
+try {
 $authResponse = Invoke-RestMethod @authParams
+} catch {
+    write-host "Authentication failed. Error message: $($_.Exception.Message)" -ForegroundColor Red
+    return
+}
 
 $accessToken = $authResponse.access_token
 
@@ -56,8 +64,6 @@ $whoamiUrl = 'https://api.central.sophos.com/whoami/v1'
 $whoamiResponse = Invoke-RestMethod -Uri $whoamiUrl -Headers $headers
 
 $partnerId = $whoamiResponse.id
-
-#Write-Host "Your Partner ID is: $partnerId"
 
 # list all tenants
 $headers = @{
