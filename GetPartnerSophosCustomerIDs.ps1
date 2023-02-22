@@ -17,12 +17,12 @@
 $clientId = Read-Host -Prompt 'Enter your Client ID'
 if ($clientId -eq "" ){
     write-host "A client ID must be specified"
-    exit
+    return
 }
 $clientSecret = Read-Host -Prompt 'Enter your Client Secret' -AsSecureString
 if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($clientSecret)) -eq "") {
     Write-Host "A client secret must be specified."
-    exit
+    return
 }
 $defaultPath = "c:\temp\Sophos.csv"
 $csvFilePath = Read-Host -Prompt "Enter the location to save the results, please include the file name ending in .csv (default: $defaultPath)"
