@@ -2,12 +2,14 @@
     Script Changelog
     1.0     [Feb 2023]    Ben Weinberg      - Script developed
     1.1     [Feb 2023]    Ben Weinberg      - Modified script to include search for tenant ID
+    1.2     [Feb 2023]    Ben Weinberg      - Modified script to search current machines registry 
 #>
 <# 
     .SYNOPSIS
     Connects to Sophos Central Partner 
     .DESCRIPTION
-    This PowerShell script prompts the user to enter their Sophos client ID, secret and TenantID which can be found in the registry of the effected machine. 
+    This PowerShell script prompts the user to enter their Sophos client ID, secret. If asks if you are running it on the effected machine and searches for the relevant registry key.
+    If you are not running it on the effected machine it prompts to enter the TenantID which can be found in the registry of the effected machine. 
     It then uses the client ID and secret to authenticate with the Sophos API and retrieve an access token. 
     The script then uses the access token to retrieve information about all tenants associated with the authenticated account searches for the tenant ID and returns the company its associated with. 
     .NOTES
@@ -25,6 +27,8 @@ if ([System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.In
     return
 }
 
+$currentDevice = Read-Host -Prompt 'Are you running this on the effected machine? (y/n default n)'
+if ($currentDevice -ne "y") {
 $tenantId = Read-Host -Prompt "Enter a tenant ID"
 if ([string]::IsNullOrEmpty($tenantId)) {
     write-host "A Tenant ID must be specified"
@@ -32,6 +36,22 @@ if ([string]::IsNullOrEmpty($tenantId)) {
 } elseif (-not [Guid]::TryParse($tenantId, [ref][Guid]::Empty)) {
     write-host "The Tenant ID must be in the GUID format"
     return
+}
+} else {
+    $reg = Get-ItemProperty -Path "HKLM:\SOFTWARE\Sophos\Management\Policy\Authority\*" -Name "tenantid"
+    if ($reg) {
+        $tenantId = $reg.tenantid
+    } else {
+        Write-Host "No tenant ID found in registry. Please specify the tenant ID manually."
+        $tenantId = Read-Host -Prompt "Enter a tenant ID"
+        if ([string]::IsNullOrEmpty($tenantId)) {
+            Write-Host "A Tenant ID must be specified"
+            return
+        } elseif (-not [Guid]::TryParse($tenantId, [ref][Guid]::Empty)) {
+            Write-Host "The Tenant ID must be in the GUID format"
+            return
+        }
+    }
 }
 
 $authParams = @{
@@ -96,3 +116,4 @@ if ($matchedTenant) {
 } else {
     Write-Host "No tenant found with ID $tenantId" -ForegroundColor Red
 }
+Pause
